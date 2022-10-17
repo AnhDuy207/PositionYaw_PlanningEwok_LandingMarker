@@ -1,7 +1,7 @@
 # PositionYaw_PlanningEwok_LandingMarker
-Control drone by code Position + Yaw
-Avoid obstacles by code Ewok
-Landing by Marker
+`*` Control drone by code Position + Yaw <br>
+`*` Avoid obstacles by code Ewok <br>
+`*` Landing by Marker <br>
 
 ## Installation
 ```
