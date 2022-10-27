@@ -20,7 +20,8 @@ class image_converter:
         self.bridge = CvBridge()
         # self.image_sub = rospy.Subscriber('/airsim_node/PX4/camera_1/Scene',Image,self.callback)
         # self.depth_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_callback)
-        self.depth_sub = rospy.Subscriber('/camera/depth/duy/image_raw', Image, self.depth_callback)
+        # self.depth_sub = rospy.Subscriber('/camera/depth/duy/image_raw', Image, self.depth_callback)
+        self.depth_sub = rospy.Subscriber('/camera_front/depth/image_raw', Image, self.depth_frame_id_callback)
 
     def depth_callback(self,msg):
         try:
@@ -57,7 +58,7 @@ class image_converter:
     # DuyNguyen
     def depth_frame_id_callback(self,msg):
         try:
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "16UC1") 
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "32FC1") 
 
         except CvBridgeError as e:
             print(e)
@@ -71,7 +72,7 @@ class image_converter:
 
         try:
             # convert frame_id to "camera_link"
-            img_msg = self.bridge.cv2_to_imgmsg(cv_image, "16UC1")
+            img_msg = self.bridge.cv2_to_imgmsg(cv_image, "32FC1")
             img_msg.header.stamp = rospy.Time.now()
             img_msg.header.frame_id = "camera_link"
             self.depth_pub.publish(img_msg)

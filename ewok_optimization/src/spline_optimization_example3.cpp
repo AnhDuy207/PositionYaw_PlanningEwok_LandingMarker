@@ -118,10 +118,17 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
     // const float cy = 240;
 
     // DuyNguyen info /camera/depth/camera_info  =>K: [347.99755859375, 0.0, 320.0, 0.0, 347.99755859375, 240.0, 0.0, 0.0, 1.0]   =>>>>> fx cx fy cy
-    const float fx = 347.99755859375; 
-    const float fy = 347.99755859375;
-    const float cx = 320.0;
+    // const float fx = 347.99755859375; 
+    // const float fy = 347.99755859375;
+    // const float cx = 320.0;
+    // const float cy = 240.0;
+
+    // rostopic echo /camera/depth/duy/camera_info => K: [391.49725341796875, 0.0, 360.0, 0.0, 391.49725341796875, 240.0, 0.0, 0.0, 1.0]
+    const float fx = 391.49725341796875; 
+    const float fy = 391.49725341796875;
+    const float cx = 360.0;
     const float cy = 240.0;
+
     
     //transform /map & /baselink
     static tf::TransformBroadcaster br;
@@ -238,11 +245,11 @@ int main(int argc, char **argv) {
     dist_marker_pub = nh.advertise<visualization_msgs::Marker>("ring_buffer/distance", 5, true);
 
     message_filters::Subscriber<sensor_msgs::Image> depth_image_sub_ ;
-    depth_image_sub_.subscribe(nh, "/camera/depth/image_raw", 5);
-    tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);
+    // depth_image_sub_.subscribe(nh, "/camera/depth/image_raw", 5);
+    // tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);
 
-    // depth_image_sub_.subscribe(nh, "/depth_topic_2", 5);
-    // tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);  //camera_depth_optical_frame
+    depth_image_sub_.subscribe(nh, "/depth_topic_2", 5);
+    tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);  //camera_depth_optical_frame
     
     tf_filter_.registerCallback(depthImageCallback);
 
@@ -342,7 +349,9 @@ int main(int argc, char **argv) {
         // std::cout << current_pose.pose.position.x << ", " << current_pose.pose.position.y << ", " << current_pose.pose.position.z << "\n";
         ros::spinOnce();
     }
-    while (ros::ok() && current_time < traj->duration()) {
+    start_reached = false;
+    // while (ros::ok() && current_time < traj->duration()) {
+    while (ros::ok() && !start_reached) {
         r.sleep();
         current_time += dt;
 
@@ -380,7 +389,8 @@ int main(int argc, char **argv) {
         last_ctrl_point.y = spline_opt.getFirstOptimizationPoint().y();
         last_ctrl_point.z = spline_opt.getFirstOptimizationPoint().z();
         point_pub.publish(last_ctrl_point);
-
+        // DuyNguyen
+        start_reached = checkPosition(target_error_, current_pose, targetTransfer(x_target[target_num-1], y_target[target_num-1], z_target[target_num-1]));
         ros::spinOnce();
     }
 

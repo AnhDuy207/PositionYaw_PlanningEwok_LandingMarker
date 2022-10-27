@@ -103,6 +103,8 @@ class OffboardControl
 	std::vector<double> z_target_; // array of ENU z position of all setpoints
 	
 	std::vector<double> yaw_target_; // array of yaw targets of all setpoints
+	double yaw_rate_;
+	double yaw_error_;
 	int num_of_gps_goal_; // number of GPS (LLA) setpoints
 	std::vector<double> lat_goal_; // array of latitude of all setpoints
 	std::vector<double> lon_goal_; // array of longitude of all setpoints
@@ -159,6 +161,8 @@ class OffboardControl
 	void enuFlight(); // perform flight with ENU (x,y,z) setpoints
 	void inputGPS(); // manage input for GPS setpoint flight mode: manual input from keyboard, load setpoints
 	void gpsFlight(); // perform flight with GPS (LLA) setpoints
+	void inputENUYaw(); //manage input for ENU setpoint & Yaw angle
+	void enuYawFlight(); //perform flight with ENU (x,y,z) setpoints & Yaw angle
 	void inputPlanner(); // manage for flight with optimization point from planner
 	void plannerFlight(); // perform flight with ENU (x,y,z) setpoints from optimization planner
 	
