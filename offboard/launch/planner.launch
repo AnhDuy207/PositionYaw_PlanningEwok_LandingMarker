@@ -13,16 +13,19 @@
         
         
         <param name="target_error" type="double" value="0.1"/>
-        <param name="number_of_target" type="int" value="5"/>
+        <param name="number_of_target" type="int" value="2"/>
         <!-- <rosparam param="target_x_pos">[5.0, 0.0, 5.0, 5.0, 7.0, 2.0, 5.0, 7.0]</rosparam>
         <rosparam param="target_y_pos">[5.0, 5.0, 0.0, 2.0, 3.0, 5.0, 4.0, 10.0]</rosparam>
         <rosparam param="target_z_pos">[5.0, 5.0, 5.0, 5.0, 7.0, 5.0, 5.0, 7.0]</rosparam> -->
-        <rosparam param="target_x_pos">[0.0, 5.0, 5.0, 0.0, 0.0]</rosparam>
+
+        <!-- <rosparam param="target_x_pos">[0.0, 5.0, 5.0, 0.0, 0.0]</rosparam>
         <rosparam param="target_y_pos">[0.0, 0.0, 4.0, 4.0, 0.0]</rosparam>
         <rosparam param="target_z_pos">[5.0, 5.0, 5.0, 5.0, 5.0]</rosparam>
-        <rosparam param="target_yaw">[0.0, 0.0, -90.0, -180.0, -270.0]</rosparam>
+        <rosparam param="target_yaw">[0.0, 0.0, -90.0, -180.0, -270.0]</rosparam> -->
 
-
+        <rosparam param="target_x_pos">[0.0, 3.0]</rosparam>
+        <rosparam param="target_y_pos">[0.0, 4.0]</rosparam>
+        <rosparam param="target_z_pos">[5.0, 5.0]</rosparam>
 
         <param name="number_of_goal" type="int" value="3"/>
         <param name="goal_error" type="double" value="0.2"/>
@@ -39,7 +42,7 @@
         <param name="land_velocity" type="double" value="0.7"/>
         <param name="return_velcity" type="double" value="0.7"/>
 
-        <param name="yaw_rate" type="double" value="0.05"/>
+        <param name="yaw_rate" type="double" value="0.1"/>
         <param name="yaw_error" type="double" value="0.03"/>
 
     </node>

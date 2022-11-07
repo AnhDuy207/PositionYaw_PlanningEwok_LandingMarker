@@ -30,9 +30,6 @@
 #include <ewok/polynomial_3d_optimization.h>
 // DuyNguyen
 #include <ewok/depth_traits.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_ros/message_filter.h>
-#include <tf2_eigen/tf2_eigen.h>
 
 // congtranv
 #include<geometry_msgs/Point.h>
@@ -65,13 +62,10 @@ std_msgs::Float32MultiArray target_array;
 std_msgs::Bool check_last_opt_point;
 
 // DuyNguyen
-/***********************************************************
 namespace enc = sensor_msgs::image_encodings;
-ros::Subscriber depth_info_sub ,depth_image_sub ;
 tf2_ros::Buffer buffer;
 int depth_height, depth_width;
 float depth_cx,depth_cy,depth_fx,depth_fy;
-/************************************************************/
 
 void currentPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -106,7 +100,6 @@ bool checkPosition(double error, geometry_msgs::PoseStamped current, geometry_ms
 	}
 }
 
-/*******************************************************************************/
 //Depth Image Processing for image topic encoding = "32FC1"
 void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
@@ -146,20 +139,20 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
     const float cy = 240.0;
 
     
-    // //transform /map & /baselink
-    // static tf::TransformBroadcaster br;
-    // tf::Transform br_transform;
-    // br_transform.setOrigin(tf::Vector3(current_pose.pose.position.x,current_pose.pose.position.y,current_pose.pose.position.z));
-    // br_transform.setRotation(tf::Quaternion(current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z, current_pose.pose.orientation.w));
-    // br.sendTransform(tf::StampedTransform(br_transform, ros::Time::now(),"/map","/base_link")); 
+    //transform /map & /baselink
+    static tf::TransformBroadcaster br;
+    tf::Transform br_transform;
+    br_transform.setOrigin(tf::Vector3(current_pose.pose.position.x,current_pose.pose.position.y,current_pose.pose.position.z));
+    br_transform.setRotation(tf::Quaternion(current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z, current_pose.pose.orientation.w));
+    br.sendTransform(tf::StampedTransform(br_transform, ros::Time::now(),"/map","/base_link")); 
 
     tf::StampedTransform transform;
     try{
         listener->lookupTransform("/map", "/camera_link", msg->header.stamp, transform);  //camera_link  camera_depth_optical_frame
     }
     catch (tf::TransformException &ex) {
-        // ROS_INFO("Couldn't get transform");
-        // ROS_WARN("%s",ex.what());
+        //ROS_INFO("Couldn't get transform");
+        //ROS_WARN("%s",ex.what());
         return;
     }
 
@@ -179,8 +172,8 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
             float val = data[v*cv_ptr->image.cols + u]; 
 
             //ROS_INFO_STREAM(val);
-            //if((std::isfinite(val)) && (val>0.35))
-            if((std::isfinite(val)) && (val>0.4)) {
+
+            if(std::isfinite(val)) {
                 Eigen::Vector4f p;
                 p[0] = val*(u - cx)/fx;
                 p[1] = val*(v - cy)/fy;
@@ -190,8 +183,20 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
                 p = T_w_c * p;
 
                 cloud.push_back(p);
-
+                // DuyNguyen
                 // if(cloud.at(dem).z() < 1.0){
+                //     cloud.pop_back();
+                //     dem--;
+                // }
+                // dem++;
+                // cloud.at(0).x()   ;            
+                // if ((sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]+p[3]*p[3])) < 2.0) {
+                //     continue;    
+                // }
+                // else
+                // {
+                //     cloud.push_back(p);
+                // }
             }
         }
     }
@@ -247,28 +252,15 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
     free_marker_pub.publish(m_free);
     dist_marker_pub.publish(m_dist); 
 }
-/*******************************************************************************/
 
-// DuyNguyen  (Tran Hai Duong)
-/******************************************************************************
-// Handle real image topic encoding = "16UC1"
+// DuyNguyen
 template<typename T> void convert(const sensor_msgs::ImageConstPtr& depth_msg)
 {
-
-    //DuyNguyen => //transform /map & /baselink
-    // static tf::TransformBroadcaster br;
-    // tf::Transform br_transform;
-    // br_transform.setOrigin(tf::Vector3(current_pose.pose.position.x,current_pose.pose.position.y,current_pose.pose.position.z));
-    // br_transform.setRotation(tf::Quaternion(current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z, current_pose.pose.orientation.w));
-    // br.sendTransform(tf::StampedTransform(br_transform, ros::Time::now(),"/map","/base_link")); 
-
-    // Use correct principal point from calibration
-    geometry_msgs::TransformStamped transform;
+  // Use correct principal point from calibration
+   geometry_msgs::TransformStamped transform;
 
     try{
-        ROS_INFO_STREAM(depth_msg->header.frame_id);
-        transform = buffer.lookupTransform("map", depth_msg->header.frame_id, ros::Time(0) );// depth_msg->header.stamp
-        // ROS_INFO_STREAM(transform);
+        transform = buffer.lookupTransform("map", depth_msg->header.frame_id,ros::Time(0) );// depth_msg->header.stamp
     }
     catch (const tf2::TransformException &ex) {
         ROS_INFO("Couldn't get transform");
@@ -277,27 +269,26 @@ template<typename T> void convert(const sensor_msgs::ImageConstPtr& depth_msg)
     }
 
 
-    Eigen::Isometry3d dT_w_c = tf2::transformToEigen(transform);
-    Eigen::Isometry3f T_w_c = dT_w_c.cast<float>();
+  Eigen::Isometry3d dT_w_c = tf2::transformToEigen(transform);
+  Eigen::Isometry3f T_w_c = dT_w_c.cast<float>();
 
-    double unit_scaling = DepthTraits<T>::toMeters( T(1) );
-    float constant_x = unit_scaling / depth_fx;
-    float constant_y = unit_scaling / depth_fy;
+  double unit_scaling = DepthTraits<T>::toMeters( T(1) );
+  float constant_x = unit_scaling / depth_fx;
+  float constant_y = unit_scaling / depth_fy;
 
-    const T* depth_row = reinterpret_cast<const T*>(&depth_msg->data[0]);
-    int row_step = depth_msg->step / sizeof(T);
-
-    //DuyNguyen
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    ewok::EuclideanDistanceRingBuffer<POW>::PointCloud cloud1;
-    for (int v = 0; v < depth_height; ++v, depth_row += row_step)
+  const T* depth_row = reinterpret_cast<const T*>(&depth_msg->data[0]);
+  int row_step = depth_msg->step / sizeof(T);
+  ewok::EuclideanDistanceRingBuffer<POW>::PointCloud cloud1;
+  for (int v = 0; v < depth_height; ++v, depth_row += row_step)
+  {
+    for (int u = 0; u < depth_width; ++u)
     {
-        for (int u = 0; u < depth_width; ++u){
-            T depth = depth_row[u];
-            // Missing points denoted by NaNs
-            if (!isnan(depth)){
-                if(DepthTraits<T>::toMeters(depth)>0.35){
+      T depth = depth_row[u];
+      // Missing points denoted by NaNs
+    if (!isnan(depth))
+        {
+            { if(DepthTraits<T>::toMeters(depth)>0.35)
+                {
                     Eigen::Vector4f p;
                     p[0] = (u - depth_cx) * depth * constant_x;
                     p[1] = (v - depth_cy) * depth * constant_y;
@@ -310,7 +301,8 @@ template<typename T> void convert(const sensor_msgs::ImageConstPtr& depth_msg)
             }
         }
     }
-    Eigen::Vector3f origin = (T_w_c * Eigen::Vector4f(0,0,0,1)).head<3>();
+  }
+   Eigen::Vector3f origin = (T_w_c * Eigen::Vector4f(0,0,0,1)).head<3>();
 
     auto t2 = std::chrono::high_resolution_clock::now();
 
@@ -344,55 +336,17 @@ template<typename T> void convert(const sensor_msgs::ImageConstPtr& depth_msg)
 
     edrb->insertPointCloud(cloud1, origin);
 
-    // DuyNguyen
-    edrb->updateDistance();
-
     auto t4 = std::chrono::high_resolution_clock::now();
 
-    // DuyNguyen
-    f_time << std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count() << " " <<
-              std::chrono::duration_cast<std::chrono::nanoseconds>(t3-t2).count() << " " <<
-              std::chrono::duration_cast<std::chrono::nanoseconds>(t4-t3).count() << std::endl;
-
-    // DuyNguyen
-    visualization_msgs::Marker m_occ, m_free, m_dist;
+    visualization_msgs::Marker m_occ, m_free;
     edrb->getMarkerOccupied(m_occ);
     edrb->getMarkerFree(m_free);
-    edrb->getMarkerDistance(m_dist, 0.5);
 
-    // DuyNguyen
+
     occ_marker_pub.publish(m_occ);
     free_marker_pub.publish(m_free);
-    dist_marker_pub.publish(m_dist);
 }
 
-void depth_handle_callback(const sensor_msgs::ImageConstPtr& depth_msg){
-    ROS_INFO_ONCE("got depth");
-    if (depth_msg->encoding == enc::TYPE_16UC1 || depth_msg->encoding == enc::MONO16)
-    {
-        convert<uint16_t>(depth_msg);
-    }
-    else if (depth_msg->encoding == enc::TYPE_32FC1)
-    {
-        convert<float>(depth_msg);
-    }
-    else
-    {
-        ROS_ERROR_STREAM( "Depth image has unsupported encoding"<< depth_msg->encoding.c_str());
-        return;
-    }
-}
-
-void depthInfoCallback( const sensor_msgs::CameraInfo& msg){
-    ROS_INFO_ONCE("got cam info");
-    depth_height = msg.height;
-    depth_width  = msg.width;
-    depth_cx = msg.P[2]; 
-    depth_cy = msg.P[6];
-    depth_fx = msg.P[0];
-    depth_fy = msg.P[5];
-}
-/*******************************************************************************/
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "spline_optimization_example");
@@ -405,9 +359,6 @@ int main(int argc, char **argv) {
     free_marker_pub = nh.advertise<visualization_msgs::Marker>("ring_buffer/free", 5, true);
     dist_marker_pub = nh.advertise<visualization_msgs::Marker>("ring_buffer/distance", 5, true);
 
-
-    /*********************************************************/
-    /*32FC1*/
     message_filters::Subscriber<sensor_msgs::Image> depth_image_sub_ ;
     // depth_image_sub_.subscribe(nh, "/camera/depth/image_raw", 5);
     // tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);
@@ -419,17 +370,6 @@ int main(int argc, char **argv) {
     tf::MessageFilter<sensor_msgs::Image> tf_filter_(depth_image_sub_, *listener, "/camera_link", 5);
     
     tf_filter_.registerCallback(depthImageCallback);
-    /*********************************************************/
-
-    /*********************************************************/
-    /*16UC1
-    // depth_image_sub = nh.subscribe("camera/depth/image_raw", 5 , depth_handle_callback);
-    depth_image_sub = nh.subscribe("/camera/depth/duy/image_raw", 5 , depth_handle_callback);
-    depth_info_sub = nh.subscribe("camera/depth/camera_info", 1 , depthInfoCallback);
-    /*********************************************************/
-
-
-
 
     double resolution;
     pnh.param("resolution", resolution, 0.15);
@@ -522,7 +462,6 @@ int main(int argc, char **argv) {
     {
         point_target_pub.publish(target_array);
         //start_reached = checkPosition(1.0, current_pose, targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()));
-        //start_reached = true;
         start_reached = checkPosition(target_error_, current_pose, targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()));
         // std::cout << "\n" << targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()).pose.position.x << ", " << targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()).pose.position.y << ", " << targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()).pose.position.z << "\n";
         // std::cout << current_pose.pose.position.x << ", " << current_pose.pose.position.y << ", " << current_pose.pose.position.z << "\n";
