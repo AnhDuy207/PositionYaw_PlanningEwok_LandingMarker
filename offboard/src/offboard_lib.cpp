@@ -35,7 +35,7 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
     nh_private_.getParam("/offboard_node/target_x_pos", x_target_);
     nh_private_.getParam("/offboard_node/target_y_pos", y_target_);
     nh_private_.getParam("/offboard_node/target_z_pos", z_target_);
-    nh_private_.getParam("/offboard_node/target_yaw", yaw_target_);
+    //nh_private_.getParam("/offboard_node/target_yaw", yaw_target_);
     nh_private_.getParam("/offboard_node/number_of_goal", num_of_gps_goal_);
     nh_private_.getParam("/offboard_node/goal_error", goal_error_);
     nh_private_.getParam("/offboard_node/latitude", lat_goal_);
@@ -761,7 +761,7 @@ void OffboardControl::inputENUYaw()
             x_target_.push_back(x);
             y_target_.push_back(y);
             z_target_.push_back(z);
-            yaw_target_.push_back(yaw);
+            //yaw_target_.push_back(yaw);
             ros::spinOnce();
             rate.sleep();
         }
@@ -773,7 +773,7 @@ void OffboardControl::inputENUYaw()
         std::printf("[ INFO] Loaded prepared setpoints [x, y, z, yaw]\n");
         for (int i = 0; i < num_of_enu_target_; i++)
         {
-            std::printf(" Target (%d): [%.1f, %.1f, %.1f, %.1f]\n", i + 1, x_target_[i], y_target_[i], z_target_[i], yaw_target_[i]);
+            std::printf(" Target (%d): [%.1f, %.1f, %.1f]\n", i + 1, x_target_[i], y_target_[i], z_target_[i]);
 
             ros::spinOnce();
             rate.sleep();
@@ -797,7 +797,7 @@ void OffboardControl::enuYawFlight()
     ros::Rate rate(10.0);
     int i = 0;
     geometry_msgs::PoseStamped setpoint;
-    std::printf("\n[ INFO] Target: [%.1f, %.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i], yaw_target_[i]);
+    std::printf("\n[ INFO] Target: [%.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i]);
 
     double target_alpha,this_loop_alpha;
     //work in progress
@@ -819,7 +819,7 @@ void OffboardControl::enuYawFlight()
             setpoint = targetTransfer(x_target_[num_of_enu_target_ - 1], y_target_[num_of_enu_target_ - 1], z_target_[num_of_enu_target_ - 1]);
         }
 
-        if(distanceBetween(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint)<5)
+        if(distanceBetween(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint)<3)
         {
             components_vel_ = velComponentsCalc(0.3, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
         }
@@ -902,12 +902,12 @@ void OffboardControl::enuYawFlight()
         if (target_reached && final_position_reached_)
         {
             std::printf("\n[ INFO] Reached Final position: [%.1f, %.1f, %.1f]\n", current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z);
-            hovering(setpoint, hover_time_);
-            // hovering(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z, current_odom_.pose.pose.orientation), hover_time_);
+            //std::cout << "yaw =" << degreeOf(yaw_) << std::endl;
+            hovering(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z, degreeOf(yaw_)), hover_time_);
             if (!return_home_mode_enable_)
             {
                 // landing(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, 0.0));
-                landing(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0));
+                landingYaw(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0, degreeOf(yaw_)));
             }
             else
             {
@@ -1174,10 +1174,13 @@ void OffboardControl::plannerAndLandingFlight()
             target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(this_loop_alpha);
             target_enu_pose_.pose.position.x = opt_point_.x; 
             target_enu_pose_.pose.position.y = opt_point_.y; 
-            target_enu_pose_.pose.position.z = opt_point_.z; 
+            target_enu_pose_.pose.position.z = opt_point_.z;
+            // sqrt(pow(opt_point_.x,2)) 
 
-            if((abs(opt_point_.x - current_odom_.pose.pose.position.x)<0.1) && (abs(opt_point_.y - current_odom_.pose.pose.position.y)<0.1)){
+            if((abs(opt_point_.x - current_odom_.pose.pose.position.x)<1.0) && (abs(opt_point_.y - current_odom_.pose.pose.position.y)<1.0)){
                 target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(yaw_);
+                // std::cout << "x = " << abs(opt_point_.x - current_odom_.pose.pose.position.x) << std::endl;
+                // std::cout << "y = " << abs(opt_point_.y - current_odom_.pose.pose.position.y) << std::endl;
             }
             else{
                 target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(this_loop_alpha);
@@ -1719,6 +1722,51 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint)
         components_vel_ = velComponentsCalc(vel_desired_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
 
         target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x + components_vel_.x, current_odom_.pose.pose.position.y + components_vel_.y, current_odom_.pose.pose.position.z + components_vel_.z);
+        target_enu_pose_.header.stamp = ros::Time::now();
+        // target_enu_pose_.pose.orientation = setpoint.pose.orientation;
+        setpoint_pose_pub_.publish(target_enu_pose_);
+
+        land_reached = checkPositionError(land_error_, setpoint);
+
+        if (current_state_.system_status == 3)
+        {
+            std::printf("\n[ INFO] Land detected\n");
+            flight_mode_.request.custom_mode = "AUTO.LAND";
+            if (set_mode_client_.call(flight_mode_) && flight_mode_.response.mode_sent)
+            {
+                break;
+            }
+        }
+        else if (land_reached)
+        {
+            flight_mode_.request.custom_mode = "AUTO.LAND";
+            if (set_mode_client_.call(flight_mode_) && flight_mode_.response.mode_sent)
+            {
+                std::printf("\n[ INFO] LANDED\n");
+            }
+        }
+        else
+        {
+            ros::spinOnce();
+            rate.sleep();
+        }
+    }
+
+    operation_time_2_ = ros::Time::now();
+    std::printf("\n[ INFO] Operation time %.1f (s)\n\n", (operation_time_2_ - operation_time_1_).toSec());
+    ros::shutdown();
+}
+
+void OffboardControl::landingYaw(geometry_msgs::PoseStamped setpoint)
+{
+    ros::Rate rate(10.0);
+    bool land_reached = false;
+    std::printf("[ INFO] Landing\n");
+    while (ros::ok() && !land_reached)
+    {
+        components_vel_ = velComponentsCalc(vel_desired_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
+
+        target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x + components_vel_.x, current_odom_.pose.pose.position.y + components_vel_.y, current_odom_.pose.pose.position.z + components_vel_.z, setpoint.pose.orientation);
         target_enu_pose_.header.stamp = ros::Time::now();
         // target_enu_pose_.pose.orientation = setpoint.pose.orientation;
         setpoint_pose_pub_.publish(target_enu_pose_);
