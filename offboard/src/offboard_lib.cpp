@@ -955,6 +955,7 @@ void OffboardControl::inputPlanner()
 
 /* perform flight with ENU (x,y,z) setpoints from optimization planner 
    use yaw setpoint from calculate between current position and next optimization point */
+// mode plannerFlight khong xoay Yaw tu diem hover den diem first opt se k lam sai lech ODOM package (in paper)
 void OffboardControl::plannerFlight()
 {
     bool first_target_reached = false;
@@ -1112,13 +1113,67 @@ void OffboardControl::plannerAndLandingFlight()
     //double curr_alpha_hover;
     bool first_receive_hover = true;
 
+    double target_alpha,this_loop_alpha;
+    //work in progress
+    //point to hold position when yaw angle is to high. Save this position and publish this position with yaw when need to rotate high yaw angle will help drone hold position. Update this position constantly when moving
+    double current_hold_x = current_odom_.pose.pose.position.x;
+    double current_hold_y = current_odom_.pose.pose.position.y;
+    double current_hold_z = current_odom_.pose.pose.position.z;
+
     while (ros::ok())
     {
         setpoint = targetTransfer(x_target_[0], y_target_[0], z_target_[0]);
-        // curr_alpha_hover = calculateYawOffset(targetTransfer(hover_first.pose.position.x, hover_first.pose.position.y, hover_first.pose.position.z), setpoint);
         components_vel_ = velComponentsCalc(0.1, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint); //vel_desired_
-        target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x+components_vel_.x, current_odom_.pose.pose.position.y+components_vel_.y, current_odom_.pose.pose.position.z+components_vel_.z,0);
-        
+        target_alpha = calculateYawOffset(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
+
+        // test to know what direction drone need to spin
+        if ((yaw_-target_alpha)>=PI){
+            target_alpha+=2*PI;
+        }
+        else if ((yaw_-target_alpha)<=-PI){
+            target_alpha-=2*PI;
+        }
+        else{}
+
+        // calculate the input for position controller (this_loop_alpha) so that the input yaw value will always be higher or lower than current yaw angle (yaw_) a value of yaw_rate_
+        // this make the drone yaw slower
+        if (target_alpha<=yaw_){
+            if ((yaw_-target_alpha)>yaw_rate_){
+                this_loop_alpha=yaw_-yaw_rate_;
+            }
+            else {
+                this_loop_alpha=target_alpha;
+            }
+        }
+        else{
+            if ((target_alpha-yaw_)>yaw_rate_){
+                this_loop_alpha=yaw_+yaw_rate_;
+            }
+            else {
+                this_loop_alpha=target_alpha;
+            }
+        }
+
+        // rotate at current position if yaw angle needed higher than 0.2 rad, otw exec both moving and yaw at the same time
+		if (abs(yaw_-target_alpha)<0.2){	
+			target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(this_loop_alpha);
+			target_enu_pose_.pose.position.x = current_odom_.pose.pose.position.x + components_vel_.x; 
+			target_enu_pose_.pose.position.y = current_odom_.pose.pose.position.y + components_vel_.y; 
+			target_enu_pose_.pose.position.z = current_odom_.pose.pose.position.z + components_vel_.z; 
+            // update the hold position // detail mention above
+            current_hold_x = current_odom_.pose.pose.position.x;
+            current_hold_y = current_odom_.pose.pose.position.y;
+            current_hold_z = current_odom_.pose.pose.position.z;
+		}
+		else {
+			target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(this_loop_alpha);
+            //using the hold position as target help the drone reduce drift
+			target_enu_pose_.pose.position.x = current_hold_x;
+			target_enu_pose_.pose.position.y = current_hold_y;
+			target_enu_pose_.pose.position.z = current_hold_z;
+			std::printf("Rotating \n");
+		}
+
         target_enu_pose_.header.stamp = ros::Time::now();
         setpoint_pose_pub_.publish(target_enu_pose_);
         first_target_reached = checkPositionError(target_error_, setpoint);
@@ -1175,9 +1230,8 @@ void OffboardControl::plannerAndLandingFlight()
             target_enu_pose_.pose.position.x = opt_point_.x; 
             target_enu_pose_.pose.position.y = opt_point_.y; 
             target_enu_pose_.pose.position.z = opt_point_.z;
-            // sqrt(pow(opt_point_.x,2)) 
 
-            if((abs(opt_point_.x - current_odom_.pose.pose.position.x)<1.0) && (abs(opt_point_.y - current_odom_.pose.pose.position.y)<1.0)){
+            if((abs(opt_point_.x - current_odom_.pose.pose.position.x)<0.3) && (abs(opt_point_.y - current_odom_.pose.pose.position.y)<0.3)){
                 target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(yaw_);
                 // std::cout << "x = " << abs(opt_point_.x - current_odom_.pose.pose.position.x) << std::endl;
                 // std::cout << "y = " << abs(opt_point_.y - current_odom_.pose.pose.position.y) << std::endl;
@@ -1194,8 +1248,9 @@ void OffboardControl::plannerAndLandingFlight()
             if (final_reached && check_last_opt_point_.data)
             {
                 std::printf("\n[ INFO] Reached Final position: [%.1f, %.1f, %.1f]\n", current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z);
-                hovering(setpoint, hover_time_);
-                
+                //hovering(setpoint, hover_time_);
+                hovering(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z, degreeOf(yaw_)), hover_time_);
+
                 // DuyNguyen => Start landing
                 // first case: when uav arrives to destination but it do not have marker.
                 // hover and wait id_marker after 5 seconds uav will auto land
@@ -1206,7 +1261,8 @@ void OffboardControl::plannerAndLandingFlight()
                     std::printf("\n[ INFO] No ids and Landing\n");
                     if (!return_home_mode_enable_)
                     {
-                        landing(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0));
+                        //landing(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0));
+                        landingYaw(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0, degreeOf(yaw_)));
                     }
                     else
                     {
