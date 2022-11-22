@@ -11,7 +11,7 @@ find_package(SuiteSparse REQUIRED)
 find_package(Boost COMPONENTS thread REQUIRED)
 
 include_directories(${EIGEN3_INCLUDE_DIR} ${CHOLMOD_INCLUDE_DIR})
-
+set(CHOLMOD_LIBRARY "/usr/lib/aarch64-linux-gnu/libcholmod.so")
 catkin_simple()
 
 cs_add_executable(spline_optimization_example src/spline_optimization_example.cpp)

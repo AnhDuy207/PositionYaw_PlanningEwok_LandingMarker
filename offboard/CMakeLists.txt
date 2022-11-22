@@ -60,5 +60,6 @@ catkin_install_python(PROGRAMS
   scripts/MarkerDetection.py
   scripts/real_cam.py
   scripts/transform.py
+  scripts/visualize-data.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

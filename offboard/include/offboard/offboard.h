@@ -175,6 +175,8 @@ class OffboardControl
 	void takeOff(geometry_msgs::PoseStamped setpoint, double hover_time); // perform takeoff task
 	void hovering(geometry_msgs::PoseStamped setpoint, double hover_time); // perform hover task
 	void landing(geometry_msgs::PoseStamped setpoint); // perform land task
+	void landingYaw(geometry_msgs::PoseStamped setpoint);
+	
 	void returnHome(geometry_msgs::PoseStamped home_pose); // perform return home task
 	void delivery(geometry_msgs::PoseStamped setpoint, double unpack_time); // perform delivery task
 	
