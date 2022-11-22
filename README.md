@@ -11,7 +11,6 @@ $ sudo apt-get install ros-melodic-vision-opencv
 $ sudo apt-get install ros-melodic-sophus
 $ sudo apt-get install libsuitesparse-dev
 $ sudo apt-get install libnlopt-dev
-$ sudo apt-get install libsuitesparse-dev
 ```
 2. Modify file /home/duynguyen/planning_Gazebo_ws/src/ewok_optimization/CMakeLists.txt
 ```
