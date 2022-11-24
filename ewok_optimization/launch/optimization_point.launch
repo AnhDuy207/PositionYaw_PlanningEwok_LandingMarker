@@ -22,6 +22,6 @@
 	</node>
     <node pkg="tf" type="static_transform_publisher" name="tf_camera" args="0.1 0 0 -1.57 0 -1.57 base_link camera_link 33"/>
     <node pkg="tf" type="static_transform_publisher" name="world_map_linker" args="0 0 0 0 0 0 world map 100" />
-    <!-- <node type="rviz" name="rviz" pkg="rviz" args="-d $(find ewok_optimization)/rviz/optimization_example.rviz" /> -->
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find ewok_optimization)/rviz/optimization_example.rviz" />
 
 </launch>

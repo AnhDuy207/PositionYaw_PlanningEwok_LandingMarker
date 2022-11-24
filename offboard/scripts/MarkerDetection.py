@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 
 import math
 import rospy
@@ -31,7 +31,10 @@ class MarkerDetector:
         # Setup subscribers
         ## Image
         # video_topic = "iris_fpv_cam/usb_cam/image_raw"
-        video_topic = "/camera/color/image_raw"
+        #video_topic = "/camera/color/image_raw"
+        # DuyNguyen
+        video_topic = "/usb_cam/image_raw"
+
         image_subscriber = rospy.Subscriber(video_topic, Image, self.image_callback)
         self.bridge = CvBridge()
 
@@ -58,19 +61,27 @@ class MarkerDetector:
         self.corners = [0.0] * 4
 
         # transformation matrix from imu to camera 4x4
-        self.imu_cam = np.zeros((4,4), dtype=np.float)
+        self.imu_cam = np.zeros((4,4), dtype=np.float64)
 
         ## camera intristic parameters fpv_cam
         # self.K = np.array([277.191356, 0.0, 160.5, 0.0, 277.191356, 120.5, 0.0, 0.0, 1.0]).reshape(3,3)
         # self.distCoeffs = np.array([0.0] * 5)
 
         ## camera intristic parameters real_cam
-        self.K = np.array([391.49725341796875, 0.0, 360.0, 0.0, 391.49725341796875, 240.0, 0.0, 0.0, 1.0]).reshape(3,3)
+        # self.K = np.array([391.49725341796875, 0.0, 360.0, 0.0, 391.49725341796875, 240.0, 0.0, 0.0, 1.0]).reshape(3,3)
+
+        # DuyNguyen
+        self.K = np.array([1118.899533, 0.0, 929.721842, 0.0, 1122.559249, 578.303123, 0.0, 0.0, 1.0]).reshape(3,3)
+
         self.distCoeffs = np.array([0.0] * 5)
 
         #Load the dictionary that was used to generate the markers.
         # self.dictionary = cv.aruco.Dictionary_get(cv.aruco.DICT_6X6_250)
-        self.dictionary = cv.aruco.Dictionary_get(cv.aruco.DICT_ARUCO_ORIGINAL)
+        # self.dictionary = cv.aruco.Dictionary_get(cv.aruco.DICT_ARUCO_ORIGINAL)  #simulation
+
+        # DuyNguyen
+        self.dictionary = cv.aruco.Dictionary_get(cv.aruco.DICT_4X4_250)
+
         # Initialize the detector parameters using default values
         self.parameters =  cv.aruco.DetectorParameters_create()
         
@@ -112,8 +123,10 @@ class MarkerDetector:
     def Aruco_marker_detector(self):
         # define the ids of marker
         # a = 0 # the index of first marker need to detect
-        self.ids_target[0] = 4
-        self.ids_target[1] = 7
+
+        #DuyNguyen: code chuyen Marker t1 sang Marker t2 (neu co 1 Marker thi chi can 1 id)
+        self.ids_target[0] = 2
+        self.ids_target[1] = 2
         
         #set up the real size of the marker
         # markerSize = 1.0
@@ -129,9 +142,9 @@ class MarkerDetector:
         self.imu_cam[3][3] = -1.0
 
         # create vector tvec1, tvec2
-        tvec1 = np.zeros((4,1), dtype=np.float)
+        tvec1 = np.zeros((4,1), dtype=np.float64)
         tvec1[3][0] = 1.0
-        tvec2 = np.zeros((4,1), dtype=np.float)
+        tvec2 = np.zeros((4,1), dtype=np.float64)
         
         while not rospy.is_shutdown():
             # print(self.pos[0])
@@ -150,12 +163,13 @@ class MarkerDetector:
                         # get corner at index i responsible id at index 0
                         self.corners = markerCorners[i]
 
-                        markerSize = 0.4
+                        # DuyNguyen 
+                        markerSize = 0.75 #size of Marker
                         axisLength = 1.0
 
                         ret1 = cv.aruco.estimatePoseSingleMarkers( self.corners, markerSize, self.K, self.distCoeffs)
                         rvecs, tvecs = ret1[0][0,0,:],ret1[1][0,0,:]
-                        
+                        # print(tvecs)
                         tvec1[0][0] = tvecs[0]
                         tvec1[1][0] = tvecs[1]
                         tvec1[2][0] = tvecs[2]
@@ -189,9 +203,9 @@ class MarkerDetector:
                         # publish marker in body frame
                         self.fly_pos_pub.publish(fly_pos)
 
-                        frame_out = cv.aruco.drawAxis(img, self.K, self.distCoeffs, rvecs, tvecs, axisLength)
+                        # frame_out = cv.aruco.drawAxis(img, self.K, self.distCoeffs, rvecs, tvecs, axisLength)
                         # self.aruco_marker_pos_pub.publish(marker_pos)
-                        self.aruco_marker_img_pub.publish(self.bridge.cv2_to_imgmsg(frame_out, "bgr8"))
+                        # self.aruco_marker_img_pub.publish(self.bridge.cv2_to_imgmsg(frame_out, "bgr8"))
                         print(markerSize)
                         self.rate.sleep()
                             
