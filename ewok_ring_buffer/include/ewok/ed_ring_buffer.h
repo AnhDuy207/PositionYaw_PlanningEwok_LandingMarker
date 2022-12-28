@@ -167,6 +167,7 @@ class EuclideanDistanceRingBuffer {
     occupancy_buffer_.getMarkerFree(m);
   }
 
+  //DuyNguyen
   void getMarkerOccupied(visualization_msgs::Marker & m)  {
     occupancy_buffer_.getMarkerOccupied(m);
   }

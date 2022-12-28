@@ -274,6 +274,73 @@ class RingBufferBase {
 
   }
 
+  //DuyNguyen
+//   template<typename F>
+//   void getMarkerHelperAxis(visualization_msgs::Marker &m,
+//                        const std::string &ns, int id, const Vector4 &color,
+//                        F func) {
+//       m.header.frame_id = "world"; //world -> base_link
+//       m.ns = ns;
+//       m.id = id;
+//       m.type = visualization_msgs::Marker::CUBE_LIST;
+//       m.action = visualization_msgs::Marker::MODIFY;  // MODIFY
+//       m.scale.x = resolution_ * 0.9;
+//       m.scale.y = resolution_ * 0.9;
+//       m.scale.z = resolution_ * 0.9;
+//       m.color.a = color(3);
+
+//       Vector3 offset_point;
+//       getPoint(offset_, offset_point);
+
+//       m.pose.position.x = offset_point.x();
+//       m.pose.position.y = offset_point.y();
+//       m.pose.position.z = offset_point.z();
+
+//     //   m.color.r = color(0);
+//     //   m.color.g = color(1);
+//     //   m.color.b = color(2);
+//     //   double color_change = 0;
+//       for (int x = 0; x < _N; x++) {
+//           for (int y = 0; y < _N; y++) {
+//               for (int z = 0; z < _N; z++) {
+
+//                   Vector3i coord(x, y, z);
+//                   coord += offset_;
+
+//                   geometry_msgs::Point p;
+//                   p.x = x * resolution_;
+//                   p.y = y * resolution_;
+//                   p.z = z * resolution_;
+
+//                   _Datatype &data = this->at(coord);
+                  
+//                   if(z%2==0){
+//                     m.color.r = 1;
+//                     m.color.g = 0;
+//                     m.color.b = 0;  
+//                   }
+//                   else {
+//                     m.color.r = 0;
+//                     m.color.g = 1;
+//                     m.color.b = 0;
+//                   }
+//                 //   m.color.r = color(0) - (color_change/255);
+//                 //   m.color.g = color(1) + (color_change/255);
+//                 //   m.color.b = color(2) + (color_change/255);
+//                 //   color_change += 3.9;
+//                   std::cout << "do = " << m.color.r << std::endl;
+//                   std::cout << "xanh = " << m.color.g << std::endl;
+//                   std::cout << "lam = " << m.color.b << std::endl;
+//                 //   std::cout << "color_change = " << color_change << std::endl;  
+//                   if (func(data)) m.points.push_back(p);
+//               }
+//             // color_change = 0;  
+//           }
+//         // color_change = 0;
+//       }
+
+//   }
+
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
  protected:

@@ -63,6 +63,7 @@ class OffboardControl
 
 
 	ros::Publisher setpoint_pose_pub_; // publish target pose to drone
+	ros::Publisher odom_error_pub_; //publish odom error before arm
 	ros::ServiceClient set_mode_client_; // set OFFBOARD mode in simulation
 	ros::ServiceClient arming_client_; // call arm command in simulation
 
@@ -104,6 +105,7 @@ class OffboardControl
 	
 	std::vector<double> yaw_target_; // array of yaw targets of all setpoints
 	double yaw_rate_;
+	bool odom_error_;
 	double yaw_error_;
 	int num_of_gps_goal_; // number of GPS (LLA) setpoints
 	std::vector<double> lat_goal_; // array of latitude of all setpoints
@@ -161,24 +163,27 @@ class OffboardControl
 	void enuFlight(); // perform flight with ENU (x,y,z) setpoints
 	void inputGPS(); // manage input for GPS setpoint flight mode: manual input from keyboard, load setpoints
 	void gpsFlight(); // perform flight with GPS (LLA) setpoints
-	void inputENUYaw(); //manage input for ENU setpoint & Yaw angle
-	void enuYawFlight(); //perform flight with ENU (x,y,z) setpoints & Yaw angle
+	void inputENUYaw(); // manage input for ENU setpoint & Yaw angle
+	void enuYawFlight(); // perform flight with ENU (x,y,z) setpoints & Yaw angle
+	void inputENUYawAndLandingSetpoint(); // manage input for ENU setpoint & Yaw angle & Landing at each setpoint to drop the package
+	void enuYawFlightAndLandingSetpoint(); // perform flight with ENU (x,y,z) setpoints & Yaw angle & Landing at each setpoint to drop the package
+
 	void inputPlanner(); // manage for flight with optimization point from planner
 	void plannerFlight(); // perform flight with ENU (x,y,z) setpoints from optimization planner
-	
-	// DuyNguyen
-	void inputPlannerAndLanding();
-	void plannerAndLandingFlight();
+	void inputPlannerAndLanding(); // manage for flight with optimization point from planner
+	void plannerAndLandingFlight(); // perform flight with ENU (x,y,z) setpoints from optimization planner and Landing at marker
 
 	double calculateYawOffset(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped setpoint); // calculate yaw offset between current position and next optimization position
 
 	void takeOff(geometry_msgs::PoseStamped setpoint, double hover_time); // perform takeoff task
 	void hovering(geometry_msgs::PoseStamped setpoint, double hover_time); // perform hover task
 	void landing(geometry_msgs::PoseStamped setpoint); // perform land task
-	void landingYaw(geometry_msgs::PoseStamped setpoint);
+	void landingYaw(geometry_msgs::PoseStamped setpoint); // perform land task & Yaw
 	
 	void returnHome(geometry_msgs::PoseStamped home_pose); // perform return home task
+	void returnHomeYaw(geometry_msgs::PoseStamped home_pose); // perform return home task & Yaw
 	void delivery(geometry_msgs::PoseStamped setpoint, double unpack_time); // perform delivery task
+	void deliveryHover(geometry_msgs::PoseStamped setpoint, double unpack_time); // perform delivery task
 	
 	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with gps setpoint msg
 	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with enu setpoint msg

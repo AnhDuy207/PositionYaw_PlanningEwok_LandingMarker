@@ -21,7 +21,7 @@ class image_converter:
         # self.image_sub = rospy.Subscriber('/airsim_node/PX4/camera_1/Scene',Image,self.callback)
         # self.depth_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_callback)
         self.depth_sub = rospy.Subscriber('/camera/depth/duy/image_raw', Image, self.depth_callback)
-        # self.depth_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_callback)
+        #self.depth_sub = rospy.Subscriber('/camera/depth/image_rect_raw', Image, self.depth_callback)
         # self.depth_sub = rospy.Subscriber('/camera/depth/image_raw', Image, self.depth_frame_id_callback)
         # self.depth_sub = rospy.Subscriber('/camera/depth/duy/image_raw', Image, self.depth_frame_id_16UC1_callback)
         # self.depth_sub = rospy.Subscriber('/camera_front/depth/image_raw', Image, self.depth_frame_id_callback)

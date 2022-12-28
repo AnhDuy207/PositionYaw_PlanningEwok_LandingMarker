@@ -17,6 +17,7 @@
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <image_transport/image_transport.h>
+#include<nav_msgs/Odometry.h>
 
 
 #include <fstream>
@@ -56,11 +57,14 @@ tf::TransformListener * listener;
 geometry_msgs::Point last_ctrl_point;
 int target_num;
 double target_error_;
+bool odom_error_;
 std::vector<double> x_target;
 std::vector<double> y_target; 
 std::vector<double> z_target;
 geometry_msgs::PoseStamped current_pose;
+nav_msgs::Odometry odom_error;
 bool start_reached = false;
+bool odom_error_reached = false;
 std_msgs::Float32MultiArray target_array;
 std_msgs::Bool check_last_opt_point;
 
@@ -73,20 +77,23 @@ int depth_height, depth_width;
 float depth_cx,depth_cy,depth_fx,depth_fy;
 /************************************************************/
 
-void currentPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
-{
+void currentPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
     current_pose = *msg;
 }
-geometry_msgs::PoseStamped targetTransfer(double x, double y, double z)
-{
+
+void odomErrorCallback(const nav_msgs::Odometry::ConstPtr& msg) {
+    odom_error_reached = true;
+    odom_error = *msg;
+}
+
+geometry_msgs::PoseStamped targetTransfer(double x, double y, double z) {
     geometry_msgs::PoseStamped target;
     target.pose.position.x = x;
     target.pose.position.y = y;
     target.pose.position.z = z;
     return target;
 }
-bool checkPosition(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
-{
+bool checkPosition(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target) {
     double xt = target.pose.position.x;
 	double yt = target.pose.position.y;
 	double zt = target.pose.position.z;
@@ -108,17 +115,14 @@ bool checkPosition(double error, geometry_msgs::PoseStamped current, geometry_ms
 
 /*******************************************************************************/
 //Depth Image Processing for image topic encoding = "32FC1"
-void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
-{
+void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg) {
     cv_bridge::CvImageConstPtr cv_ptr;
 
-    try
-    {
+    try {
         cv_ptr = cv_bridge::toCvShare(msg);
         // std::cout << "cv_ptr->encoding = " << cv_ptr->encoding << std::endl;  //32FC1
     }
-    catch (cv_bridge::Exception& e)
-    {
+    catch (cv_bridge::Exception& e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
@@ -154,7 +158,7 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
     // br.sendTransform(tf::StampedTransform(br_transform, ros::Time::now(),"/map","/base_link")); 
 
     tf::StampedTransform transform;
-    try{
+    try {
         listener->lookupTransform("/map", "/camera_link", msg->header.stamp, transform);  //camera_link  camera_depth_optical_frame
     }
     catch (tf::TransformException &ex) {
@@ -239,9 +243,10 @@ void depthImageCallback(const sensor_msgs::Image::ConstPtr& msg)
               std::chrono::duration_cast<std::chrono::nanoseconds>(t4-t3).count() << std::endl;
 
     visualization_msgs::Marker m_occ, m_free, m_dist;
+    //DuyNguyen
     edrb->getMarkerOccupied(m_occ);
     edrb->getMarkerFree(m_free);
-    edrb->getMarkerDistance(m_dist, 0.5);
+    edrb->getMarkerDistance(m_dist, 0.8);    //distance mau xanh duong? default=0.5
 
     occ_marker_pub.publish(m_occ);
     free_marker_pub.publish(m_free);
@@ -450,13 +455,30 @@ int main(int argc, char **argv) {
     ros::Publisher point_target_pub = nh.advertise<std_msgs::Float32MultiArray>("point_target",1);
     ros::Publisher check_last_opt_point_pub = nh.advertise<std_msgs::Bool>("check_last_opt_point",1);
 
+    //DuyNguyen
+    ros::Subscriber odom_error_sub = nh.subscribe<nav_msgs::Odometry>("odom_error", 1, odomErrorCallback);
+
     nh.getParam("/spline_optimization_example/number_of_target", target_num);
     nh.getParam("/spline_optimization_example/target_error", target_error_);
+    nh.getParam("/spline_optimization_example/odom_error", odom_error_);
     nh.getParam("/spline_optimization_example/x_pos", x_target);
     nh.getParam("/spline_optimization_example/y_pos", y_target);
     nh.getParam("/spline_optimization_example/z_pos", z_target);
     
-    for(int i=0; i<target_num; i++){
+    if(odom_error_) {
+        while(ros::ok() && !odom_error_reached) {   
+            std::cout << "\nWaiting Odometry Error!\n" << std ::endl;
+            ros::spinOnce();
+        }
+        std::cout << "Odometry Error: " << odom_error.pose.pose.position << std ::endl;
+        for(int i=0; i<target_num; i++) {
+            x_target[i] += odom_error.pose.pose.position.x;
+            y_target[i] += odom_error.pose.pose.position.y;
+            z_target[i] += odom_error.pose.pose.position.z;
+        }
+    }
+
+    for(int i=0; i<target_num; i++) {
         target_array.data.push_back(x_target[i]);
         target_array.data.push_back(y_target[i]);
         target_array.data.push_back(z_target[i]);
@@ -471,13 +493,12 @@ int main(int argc, char **argv) {
     //
     typename ewok::Polynomial3DOptimization<10>::Vector3Array vec;   //vec la mang cac vector3
 
-    // congtranv
-    for(int i=0; i<target_num; i++)
-    {
+    std::cout << "Global setpoints to generate the global trajectory:\n" << std::endl;
+    for(int i=0; i<target_num; i++) {
         vec.push_back(Eigen::Vector3d(x_target[i], y_target[i], z_target[i]));
-        std::cout << x_target[i] << ", " << y_target[i] << ", " << z_target[i] << "\n";
+        std::cout << "Target (" << i+1 << "): ["<< x_target[i] << ", " << y_target[i] << ", " << z_target[i] << "]\n";
     }
-
+    std::cout << std::endl;
 
     auto traj = po.computeTrajectory(vec);
 
@@ -518,8 +539,7 @@ int main(int argc, char **argv) {
 
     // congtranv
     ewok::EuclideanDistanceRingBuffer<POW> rrb(0.1, 1.0);
-    while(ros::ok() && !start_reached)
-    {
+    while(ros::ok() && !start_reached) {
         point_target_pub.publish(target_array);
         //start_reached = checkPosition(1.0, current_pose, targetTransfer(vec[0].x(), vec[0].y(), vec[0].z()));
         //start_reached = true;

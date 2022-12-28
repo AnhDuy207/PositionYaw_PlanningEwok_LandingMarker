@@ -295,6 +295,7 @@ class RaycastRingBuffer {
                     [](const _Datatype & d) { return isFree(d);});
   }
 
+  //DuyNguyen
   void getMarkerOccupied(visualization_msgs::Marker & m)  {
     occupancy_buffer_.getMarkerHelper(m, "ring_buffer_occupied", 0, Vector4(1, 0, 0, 0.8),
                     [](const _Datatype & d) { return isOccupied(d);});
