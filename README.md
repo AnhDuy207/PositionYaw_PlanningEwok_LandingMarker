@@ -57,4 +57,4 @@ $ roslaunch offboard plannerMarker.launch
 ```
 $ rosbag record -O subset_11012023 rostopic echo /cam_1/color/camera_info /cam_2/color/camera_info /cam_1/color/image_raw /cam_2/color/image_raw /cam_2/depth/image_rect_raw /depth_topic_2 /mavros/local_position/pose /mavros/imu/data /mavros/local_position/odom /ring_buffer/distance /ring_buffer/free /ring_buffer/free_array /ring_buffer/occupied /before_optimization /after_optimization /global_trajectory /tf /tf_static 
 ```
-* Video demo: [Video](https://husteduvn-my.sharepoint.com/:v:/g/personal/quang_nguyenanh_hust_edu_vn/ET00gwt5OQ5Jm9ZKs9PFqUMBmEKejd-n5vpTubCI6PtrSg?e=TT036x)
+* Video demo: [Video](https://husteduvn-my.sharepoint.com/:v:/g/personal/quang_nguyenanh_hust_edu_vn/EQGtxF09sEtDtIvrLZ9tbpwBVSzv9PWh_cwRIGPLcqzE5g?e=tUSade)
